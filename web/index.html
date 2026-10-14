@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Last Day</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/styles.css">
+<script src="/static/vendor/cytoscape.min.js"></script>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <span class="mark" aria-hidden="true"></span>
+    <div>
+      <h1>Last Day</h1>
+      <p class="tagline">Know what your company forgets before someone leaves</p>
+    </div>
+  </div>
+  <div class="top-controls">
+    <label class="graph-pick">
+      <span class="sr">Graph</span>
+      <select id="graphSelect" aria-label="Choose a company or repository graph"></select>
+    </label>
+    <button class="btn ghost" id="btnConnect">Connections</button>
+    <button class="btn ghost" id="btnRepo">Load a GitHub repo</button>
+    <button class="btn ghost" id="btnReset">Reset demo</button>
+    <span class="status" id="statusDots"></span>
+  </div>
+</header>
+
+<main class="layout">
+  <!-- People -------------------------------------------------------------->
+  <aside class="people" aria-label="People">
+    <div class="mode" role="radiogroup" aria-label="What happens to the people you select">
+      <button role="radio" aria-checked="true" data-mode="leave" class="mode-btn on">Leaving the company</button>
+      <button role="radio" aria-checked="false" data-mode="away" class="mode-btn">On leave</button>
+    </div>
+    <input id="peopleSearch" class="search" type="search" placeholder="Find a person" aria-label="Find a person">
+    <div id="peopleList" class="people-list"></div>
+    <div class="people-foot">
+      <button class="btn" id="btnClear">Clear selection</button>
+    </div>
+  </aside>
+
+  <!-- Graph ---------------------------------------------------------------->
+  <section class="stage" aria-label="Knowledge graph">
+    <div class="stage-head">
+      <div class="headline" id="headline">
+        <p class="hl-big" id="hlBig">Pick someone on the left.</p>
+        <p class="hl-small" id="hlSmall">Last Day removes them from the graph and shows what nobody else knows.</p>
+      </div>
+      <div class="health" id="health" hidden>
+        <span class="h-label">Knowledge health</span>
+        <span class="h-num" id="hBefore">0</span>
+        <span class="h-arrow" aria-hidden="true"></span>
+        <span class="h-num after" id="hAfter">0</span>
+      </div>
+    </div>
+    <div class="cy-wrap">
+      <div id="cy"></div>
+      <div class="canvas-tools" role="toolbar" aria-label="Graph tools">
+        <button type="button" class="tool" id="tColors" aria-pressed="false" title="Colors and filters">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.8 1.6-1.6 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-.9.7-1.6 1.6-1.6H16a5 5 0 0 0 5-5C21 6.4 17 3 12 3z" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="7.5" cy="11" r="1.3" fill="currentColor"/><circle cx="10" cy="7" r="1.3" fill="currentColor"/><circle cx="14.5" cy="7" r="1.3" fill="currentColor"/></svg>
+          Colors
+        </button>
+        <button type="button" class="tool" id="tLayout" title="Re-arrange the graph">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Re-arrange
+        </button>
+      </div>
+      <aside class="color-panel" id="colorPanel" aria-label="Colors and filters" hidden></aside>
+      <div class="minimap">
+        <canvas id="mini" width="220" height="140" aria-label="Minimap: click or drag to move around the graph"></canvas>
+        <div class="zoombar">
+          <button type="button" id="zOut" aria-label="Zoom out">&minus;</button>
+          <span id="zPct" aria-live="polite">100%</span>
+          <button type="button" id="zIn" aria-label="Zoom in">+</button>
+          <button type="button" id="zFit" aria-label="Fit the graph to the screen" title="Fit">
+            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="legend" aria-label="Legend">
+        <span><i class="dot safe"></i>Covered</span>
+        <span><i class="dot fragile"></i>Fragile</span>
+        <span><i class="dot orphaned"></i>Orphaned</span>
+        <span><i class="dot inherited"></i>At risk through a dependency</span>
+        <span><i class="dot gap"></i>Already a gap</span>
+        <span><i class="shape-key sq"></i>System</span>
+        <span><i class="shape-key di"></i>Customer</span>
+        <span><i class="shape-key hx"></i>Process</span>
+        <span><i class="shape-key ci"></i>Person</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Panel ---------------------------------------------------------------->
+  <aside class="panel" aria-label="Details">
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="impact" class="tab on" aria-selected="true">Impact</button>
+      <button role="tab" data-tab="interview" class="tab" aria-selected="false">Exit interview</button>
+      <button role="tab" data-tab="handover" class="tab" aria-selected="false">Handover</button>
+      <button role="tab" data-tab="ask" class="tab" aria-selected="false">Ask</button>
+      <button role="tab" data-tab="backtest" class="tab" aria-selected="false">Backtest</button>
+    </nav>
+    <div class="tab-body" id="tab-impact"></div>
+    <div class="tab-body" id="tab-interview" hidden></div>
+    <div class="tab-body" id="tab-handover" hidden></div>
+    <div class="tab-body" id="tab-ask" hidden></div>
+    <div class="tab-body" id="tab-backtest" hidden></div>
+  </aside>
+</main>
+
+<section class="drawer" id="drawer" aria-label="Cypher queries behind the last answer">
+  <button class="drawer-handle" id="drawerHandle" aria-expanded="false">
+    Cypher behind this answer <span id="qCount"></span>
+  </button>
+  <div class="drawer-body" id="drawerBody"></div>
+</section>
+
+<dialog id="repoDialog">
+  <form method="dialog" class="dlg">
+    <h2>Load a GitHub repository</h2>
+    <p>Pulls PRs, reviews, PR discussions and issue answers, then builds one graph for the repo in FalkorDB.
+      Needs <code>GITHUB_TOKEN</code> on the server.</p>
+    <label>Repository <input id="repoInput" placeholder="FalkorDB/FalkorDB" required></label>
+    <label>History to read (days) <input id="repoDays" type="number" value="730" min="90" max="3650"></label>
+    <div class="log" id="repoLog" aria-live="polite"></div>
+    <div class="dlg-actions">
+      <button class="btn ghost" value="cancel">Close</button>
+      <button class="btn primary" id="repoGo" value="default">Build the graph</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="connDialog" class="wide" aria-labelledby="connTitle">
+  <div class="dlg">
+    <div class="dlg-head">
+      <h2 id="connTitle">Connections</h2>
+      <button type="button" class="btn ghost small" id="connClose">Close</button>
+    </div>
+    <p>Last Day reads who answers questions in Slack and who writes docs in Notion, matches each person across
+      GitHub, Slack and Notion, and builds one graph for the company.</p>
+    <div id="connBody"><p class="small">Loading…</p></div>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>
